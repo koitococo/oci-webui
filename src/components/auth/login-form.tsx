@@ -54,7 +54,6 @@ export function LoginForm() {
       const result = await signIn("credentials", {
         username,
         password,
-        registryName: undefined,
         redirect: false,
       });
 

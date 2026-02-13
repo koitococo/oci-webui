@@ -15,7 +15,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         const username = credentials.username as string;
         const password = credentials.password as string;
-        const registryName = (credentials.registryName as string) || undefined;
+        const raw = credentials.registryName as string;
+        const registryName = raw && raw !== "undefined" ? raw : undefined;
 
         if (!username || !password) return null;
 
