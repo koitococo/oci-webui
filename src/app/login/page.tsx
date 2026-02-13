@@ -4,6 +4,8 @@ import { Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getRegistries } from "@/lib/config";
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   const registries = getRegistries();
 
