@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_SECRET=dev-secret-change-me-in-production
+      - REGISTRY_URL=http://registry:5000
+      - REGISTRY_NAME=local
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      - registry
+
+  registry:
+    image: registry:2
+    ports:
+      - "5000:5000"
+    environment:
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+    volumes:
+      - registry-data:/var/lib/registry
+
+volumes:
+  registry-data:
