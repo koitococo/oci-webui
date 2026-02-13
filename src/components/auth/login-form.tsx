@@ -13,37 +13,31 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { discoverAuth } from "@/lib/api-client";
 
-export function LoginForm() {
+interface LoginFormProps {
+  registries: string[];
+}
+
+export function LoginForm({ registries }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/repos";
 
+  const isSingleRegistry = registries.length === 1;
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [registryUrl, setRegistryUrl] = useState(
-    process.env.NEXT_PUBLIC_REGISTRY_URL ?? ""
-  );
-  const [authType, setAuthType] = useState<string | null>(null);
+  const [selectedRegistry, setSelectedRegistry] = useState(registries[0]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [discovering, setDiscovering] = useState(false);
-
-  async function handleDiscover() {
-    if (!registryUrl) return;
-    setDiscovering(true);
-    try {
-      const result = await discoverAuth(registryUrl);
-      setAuthType(result.authType);
-    } catch {
-      setAuthType(null);
-    } finally {
-      setDiscovering(false);
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +48,7 @@ export function LoginForm() {
       const result = await signIn("credentials", {
         username,
         password,
+        registryName: selectedRegistry,
         redirect: false,
       });
 
@@ -75,7 +70,9 @@ export function LoginForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Sign in to Registry</CardTitle>
         <CardDescription>
-          Enter your credentials to browse the OCI registry
+          {isSingleRegistry
+            ? `Sign in to ${registries[0]}`
+            : "Select a registry and enter your credentials"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -86,34 +83,26 @@ export function LoginForm() {
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="registry">Registry URL</Label>
-            <div className="flex gap-2">
-              <Input
-                id="registry"
-                value={registryUrl}
-                onChange={(e) => {
-                  setRegistryUrl(e.target.value);
-                  setAuthType(null);
-                }}
-                placeholder="https://registry.example.com"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleDiscover}
-                disabled={!registryUrl || discovering}
+          {!isSingleRegistry && (
+            <div className="space-y-2">
+              <Label htmlFor="registry">Registry</Label>
+              <Select
+                value={selectedRegistry}
+                onValueChange={setSelectedRegistry}
               >
-                {discovering ? "..." : "Detect"}
-              </Button>
+                <SelectTrigger id="registry">
+                  <SelectValue placeholder="Select a registry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {registries.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            {authType && (
-              <Badge variant="secondary" className="text-xs">
-                Auth: {authType}
-              </Badge>
-            )}
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>

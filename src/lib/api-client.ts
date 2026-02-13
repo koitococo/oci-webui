@@ -47,13 +47,3 @@ export function deleteManifest(
     method: "DELETE",
   });
 }
-
-export function discoverAuth(
-  registryUrl: string
-): Promise<{ authType: string }> {
-  return fetchApi(`${BASE}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ registryUrl }),
-  });
-}
