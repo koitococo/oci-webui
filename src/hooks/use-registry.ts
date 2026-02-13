@@ -38,9 +38,9 @@ export function useDeleteManifest() {
     mutationFn: ({ name, digest }: { name: string; digest: string }) =>
       deleteManifest(name, digest),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["tags", variables.name],
-      });
+      queryClient.invalidateQueries({ queryKey: ["tags", variables.name] });
+      queryClient.invalidateQueries({ queryKey: ["manifest", variables.name] });
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
     },
   });
 }
