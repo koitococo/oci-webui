@@ -23,7 +23,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           const registry = getRegistry(registryName);
           const { provider } = await discoverAuthProvider(registry.url);
-          const token = await provider.authenticate(username, password);
+          // Validate credentials by attempting auth
+          await provider.authenticate(username, password);
 
           audit({
             action: "auth.login",
@@ -32,12 +33,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             status: "success",
           });
 
+          // Store base64 credentials for on-demand token fetching
+          const basicCredentials = btoa(`${username}:${password}`);
+
           return {
             id: username,
             name: username,
             registryName: registry.name,
-            registryToken: token.token,
-            tokenExpiresAt: token.expiresAt,
+            registryCredentials: basicCredentials,
             authType: provider.type,
           };
         } catch (error) {
@@ -56,8 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     jwt({ token, user }) {
       if (user) {
         token.registryName = (user as Record<string, unknown>).registryName as string;
-        token.registryToken = (user as Record<string, unknown>).registryToken as string;
-        token.tokenExpiresAt = (user as Record<string, unknown>).tokenExpiresAt as number | undefined;
+        token.registryCredentials = (user as Record<string, unknown>).registryCredentials as string;
         token.authType = (user as Record<string, unknown>).authType as string;
         token.username = user.name ?? user.id;
       }

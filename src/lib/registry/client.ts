@@ -1,68 +1,115 @@
 import { OCI_ACCEPT_HEADERS } from "@/lib/shared/constants";
 import { audit } from "@/lib/audit";
 import type {
-  AuthToken,
   OCICatalog,
   OCIManifest,
   OCIIndex,
   OCITagList,
   RegistryConfig,
 } from "./types";
-import { discoverAuthProvider, type AuthProvider } from "./auth-provider";
+
+interface WwwAuthChallenge {
+  realm: string;
+  service?: string;
+  scope?: string;
+}
+
+function parseWwwAuthenticate(header: string): WwwAuthChallenge | null {
+  const realmMatch = header.match(/realm="([^"]*)"/);
+  if (!realmMatch) return null;
+
+  const serviceMatch = header.match(/service="([^"]*)"/);
+  const scopeMatch = header.match(/scope="([^"]*)"/);
+
+  return {
+    realm: realmMatch[1],
+    service: serviceMatch?.[1],
+    scope: scopeMatch?.[1],
+  };
+}
 
 export class RegistryClient {
-  private token: AuthToken;
-  private provider: AuthProvider | null = null;
+  private credentials: string; // base64(user:pass)
+  private authType: string;
+  private tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
   constructor(
     private config: RegistryConfig,
-    token: AuthToken
+    credentials: string,
+    authType: string
   ) {
-    this.token = token;
+    this.credentials = credentials;
+    this.authType = authType;
   }
 
   private get baseUrl() {
     return `${this.config.url}/v2`;
   }
 
-  private authHeader(): Record<string, string> {
-    if (this.provider?.type === "basic") {
-      return { Authorization: `Basic ${this.token.token}` };
+  private async getBearerToken(challenge: WwwAuthChallenge): Promise<string> {
+    const cacheKey = `${challenge.realm}|${challenge.service ?? ""}|${challenge.scope ?? ""}`;
+    const cached = this.tokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.token;
     }
-    return { Authorization: `Bearer ${this.token.token}` };
+
+    const url = new URL(challenge.realm);
+    if (challenge.service) url.searchParams.set("service", challenge.service);
+    if (challenge.scope) url.searchParams.set("scope", challenge.scope);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Basic ${this.credentials}` },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Bearer token fetch failed: ${res.status}`);
+    }
+
+    const body = await res.json();
+    const token: string = body.token ?? body.access_token;
+    if (!token) throw new Error("No token in auth response");
+
+    const expiresIn = body.expires_in ?? 300;
+    this.tokenCache.set(cacheKey, {
+      token,
+      expiresAt: Date.now() + expiresIn * 1000 - 10_000, // 10s safety margin
+    });
+
+    return token;
   }
 
   private async fetchWithAuth(
     url: string,
     init: RequestInit = {}
   ): Promise<Response> {
-    const headers = new Headers(init.headers);
-    const auth = this.authHeader();
-    for (const [k, v] of Object.entries(auth)) {
-      headers.set(k, v);
+    // For basic auth, just send credentials directly
+    if (this.authType === "basic") {
+      const headers = new Headers(init.headers);
+      headers.set("Authorization", `Basic ${this.credentials}`);
+      return fetch(url, { ...init, headers });
     }
 
+    // For bearer auth: first try without token (or with cached token),
+    // then handle 401 by parsing WWW-Authenticate and getting a scoped token
+    const headers = new Headers(init.headers);
+
+    // Try the request — if we get a 401, we'll use the challenge to get a token
     let res = await fetch(url, { ...init, headers });
 
-    // Auto-refresh on 401
-    if (res.status === 401 && this.provider?.refreshToken) {
-      this.token = await this.provider.refreshToken(this.token);
-      const retryHeaders = new Headers(init.headers);
-      const newAuth = this.authHeader();
-      for (const [k, v] of Object.entries(newAuth)) {
-        retryHeaders.set(k, v);
+    if (res.status === 401) {
+      const wwwAuth = res.headers.get("www-authenticate");
+      if (wwwAuth) {
+        const challenge = parseWwwAuthenticate(wwwAuth);
+        if (challenge) {
+          const token = await this.getBearerToken(challenge);
+          const retryHeaders = new Headers(init.headers);
+          retryHeaders.set("Authorization", `Bearer ${token}`);
+          res = await fetch(url, { ...init, headers: retryHeaders });
+        }
       }
-      res = await fetch(url, { ...init, headers: retryHeaders });
     }
 
     return res;
-  }
-
-  async ensureProvider(): Promise<void> {
-    if (!this.provider) {
-      const { provider } = await discoverAuthProvider(this.config.url);
-      this.provider = provider;
-    }
   }
 
   async listRepositories(n?: number, last?: string): Promise<OCICatalog> {
