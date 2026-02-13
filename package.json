@@ -15,6 +15,7 @@
     "loglayer": "^9.0.0",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
+    "next-auth": "5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
