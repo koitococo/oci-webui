@@ -2,19 +2,21 @@
 
 import { useRepositories } from "@/hooks/use-registry";
 import { useAtom } from "jotai";
-import { searchQueryAtom, sortOrderAtom } from "@/store/atoms";
+import { searchQueryAtom, sortOrderAtom, repoViewModeAtom } from "@/store/atoms";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RepoCard } from "./repo-card";
-import { ArrowUpDown, Search } from "lucide-react";
+import { RepoTree } from "./repo-tree";
+import { ArrowUpDown, LayoutGrid, Network, Search } from "lucide-react";
 import { useMemo } from "react";
 
 export function RepoList() {
   const { data, isLoading, error } = useRepositories();
   const [search, setSearch] = useAtom(searchQueryAtom);
   const [sortOrder, setSortOrder] = useAtom(sortOrderAtom);
+  const [viewMode, setViewMode] = useAtom(repoViewModeAtom);
 
   const filtered = useMemo(() => {
     if (!data?.repositories) return [];
@@ -52,6 +54,18 @@ export function RepoList() {
         <Button
           variant="outline"
           size="icon"
+          onClick={() => setViewMode(viewMode === "grid" ? "tree" : "grid")}
+          title={viewMode === "grid" ? "Tree view" : "Grid view"}
+        >
+          {viewMode === "grid" ? (
+            <Network className="h-4 w-4" />
+          ) : (
+            <LayoutGrid className="h-4 w-4" />
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() =>
             setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
           }
@@ -71,6 +85,8 @@ export function RepoList() {
         <p className="py-8 text-center text-muted-foreground">
           {search ? "No repositories match your search." : "No repositories found."}
         </p>
+      ) : viewMode === "tree" ? (
+        <RepoTree repos={filtered} />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((name) => (

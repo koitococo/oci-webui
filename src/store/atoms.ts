@@ -10,3 +10,4 @@ export const deleteDialogAtom = atom<{
   tag: string;
 }>({ open: false, repoName: "", digest: "", tag: "" });
 export const themeAtom = atom<"light" | "dark" | "system">("system");
+export const repoViewModeAtom = atom<"grid" | "tree">("grid");
