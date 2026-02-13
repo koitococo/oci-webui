@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Package } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LoginPage() {
   return (
@@ -9,7 +11,9 @@ export default function LoginPage() {
           <Package className="h-8 w-8" />
           <h1 className="text-2xl font-bold">OCI Registry WebUI</h1>
         </div>
-        <LoginForm />
+        <Suspense fallback={<Skeleton className="h-96 w-96" />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

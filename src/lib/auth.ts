@@ -64,7 +64,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     session({ session, token }) {
       session.user.name = token.username as string;
-      (session as Record<string, unknown>).registryName = token.registryName;
+      (session as unknown as Record<string, unknown>).registryName = token.registryName;
       return session;
     },
   },

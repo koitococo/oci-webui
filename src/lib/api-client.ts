@@ -24,25 +24,26 @@ export function fetchTags(
   n?: number,
   last?: string
 ): Promise<OCITagList> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ repo: name });
   if (n) params.set("n", String(n));
   if (last) params.set("last", last);
-  const qs = params.toString();
-  return fetchApi(`${BASE}/${name}/tags${qs ? `?${qs}` : ""}`);
+  return fetchApi(`${BASE}/tags?${params}`);
 }
 
 export function fetchManifest(
   name: string,
   ref: string
 ): Promise<{ manifest: OCIManifest | OCIIndex; digest: string; contentType: string }> {
-  return fetchApi(`${BASE}/${name}/manifests/${ref}`);
+  const params = new URLSearchParams({ repo: name, ref });
+  return fetchApi(`${BASE}/manifests?${params}`);
 }
 
 export function deleteManifest(
   name: string,
   digest: string
 ): Promise<{ ok: boolean }> {
-  return fetchApi(`${BASE}/${name}/manifests/${digest}`, {
+  const params = new URLSearchParams({ repo: name, ref: digest });
+  return fetchApi(`${BASE}/manifests?${params}`, {
     method: "DELETE",
   });
 }

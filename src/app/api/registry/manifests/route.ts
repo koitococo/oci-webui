@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { getAuthedClient } from "@/lib/registry/server";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ name: string[]; ref: string }> }
-) {
+export async function GET(request: Request) {
   try {
     const { client } = await getAuthedClient();
-    const { name, ref } = await params;
-    const repoName = name.join("/");
+    const { searchParams } = new URL(request.url);
+    const repo = searchParams.get("repo");
+    const ref = searchParams.get("ref");
+    if (!repo || !ref) {
+      return NextResponse.json(
+        { error: "repo and ref query parameters are required" },
+        { status: 400 }
+      );
+    }
 
-    const result = await client.getManifest(repoName, ref);
+    const result = await client.getManifest(repo, ref);
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
@@ -23,16 +27,20 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ name: string[]; ref: string }> }
-) {
+export async function DELETE(request: Request) {
   try {
     const { client } = await getAuthedClient();
-    const { name, ref } = await params;
-    const repoName = name.join("/");
+    const { searchParams } = new URL(request.url);
+    const repo = searchParams.get("repo");
+    const ref = searchParams.get("ref");
+    if (!repo || !ref) {
+      return NextResponse.json(
+        { error: "repo and ref query parameters are required" },
+        { status: 400 }
+      );
+    }
 
-    await client.deleteManifest(repoName, ref);
+    await client.deleteManifest(repo, ref);
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
