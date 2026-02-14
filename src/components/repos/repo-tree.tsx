@@ -57,7 +57,7 @@ function TreeItem({
       <Link
         href={`/repos/${node.fullPath}`}
         className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-        style={{ paddingLeft: `${depth * 20 + 8}px` }}
+        style={{ paddingLeft: `${(depth + 1) * 20 + 8}px` }}
       >
         <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="truncate">{node.name}</span>
