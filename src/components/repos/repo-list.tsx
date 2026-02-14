@@ -9,11 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RepoCard } from "./repo-card";
 import { RepoTree } from "./repo-tree";
-import { ArrowUpDown, LayoutGrid, Network, Search } from "lucide-react";
+import { ArrowUpDown, LayoutGrid, Network, RefreshCw, Search } from "lucide-react";
 import { useMemo } from "react";
 
 export function RepoList() {
-  const { data, isLoading, error } = useRepositories();
+  const { data, isLoading, error, refetch, isFetching } = useRepositories();
   const [search, setSearch] = useAtom(searchQueryAtom);
   const [sortOrder, setSortOrder] = useAtom(sortOrderAtom);
   const [viewMode, setViewMode] = useAtom(repoViewModeAtom);
@@ -51,6 +51,15 @@ export function RepoList() {
             className="pl-9"
           />
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
         <Button
           variant="outline"
           size="icon"
