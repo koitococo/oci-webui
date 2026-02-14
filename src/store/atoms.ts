@@ -1,7 +1,8 @@
 import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 
 export const searchQueryAtom = atom("");
-export const sortOrderAtom = atom<"asc" | "desc">("asc");
+export const sortOrderAtom = atomWithStorage<"asc" | "desc">("sortOrder", "asc");
 export const sidebarOpenAtom = atom(false);
 export const deleteDialogAtom = atom<{
   open: boolean;
@@ -10,4 +11,4 @@ export const deleteDialogAtom = atom<{
   tag: string;
 }>({ open: false, repoName: "", digest: "", tag: "" });
 export const themeAtom = atom<"light" | "dark" | "system">("system");
-export const repoViewModeAtom = atom<"grid" | "tree">("grid");
+export const repoViewModeAtom = atomWithStorage<"grid" | "tree">("repoViewMode", "grid");

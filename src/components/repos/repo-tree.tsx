@@ -42,12 +42,30 @@ function buildTree(repos: string[]): TreeNode {
   return root;
 }
 
+function sortChildren(
+  children: Map<string, TreeNode>,
+  sortOrder: "asc" | "desc"
+) {
+  return Array.from(children.values()).sort((a, b) => {
+    // Folders first, then repos
+    const aIsFolder = a.children.size > 0 && !a.isRepo;
+    const bIsFolder = b.children.size > 0 && !b.isRepo;
+    if (aIsFolder && !bIsFolder) return -1;
+    if (!aIsFolder && bIsFolder) return 1;
+    return sortOrder === "asc"
+      ? a.name.localeCompare(b.name)
+      : b.name.localeCompare(a.name);
+  });
+}
+
 function TreeItem({
   node,
   depth,
+  sortOrder,
 }: {
   node: TreeNode;
   depth: number;
+  sortOrder: "asc" | "desc";
 }) {
   const hasChildren = node.children.size > 0;
   const [expanded, setExpanded] = useState(depth < 1);
@@ -99,25 +117,27 @@ function TreeItem({
       </button>
       {expanded && (
         <div>
-          {Array.from(node.children.values())
-            .sort((a, b) => {
-              // Folders first, then repos
-              const aIsFolder = a.children.size > 0 && !a.isRepo;
-              const bIsFolder = b.children.size > 0 && !b.isRepo;
-              if (aIsFolder && !bIsFolder) return -1;
-              if (!aIsFolder && bIsFolder) return 1;
-              return a.name.localeCompare(b.name);
-            })
-            .map((child) => (
-              <TreeItem key={child.fullPath} node={child} depth={depth + 1} />
-            ))}
+          {sortChildren(node.children, sortOrder).map((child) => (
+            <TreeItem
+              key={child.fullPath}
+              node={child}
+              depth={depth + 1}
+              sortOrder={sortOrder}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-export function RepoTree({ repos }: { repos: string[] }) {
+export function RepoTree({
+  repos,
+  sortOrder,
+}: {
+  repos: string[];
+  sortOrder: "asc" | "desc";
+}) {
   const tree = useMemo(() => buildTree(repos), [repos]);
 
   if (repos.length === 0) {
@@ -130,17 +150,14 @@ export function RepoTree({ repos }: { repos: string[] }) {
 
   return (
     <div className="rounded-lg border bg-card p-2">
-      {Array.from(tree.children.values())
-        .sort((a, b) => {
-          const aIsFolder = a.children.size > 0 && !a.isRepo;
-          const bIsFolder = b.children.size > 0 && !b.isRepo;
-          if (aIsFolder && !bIsFolder) return -1;
-          if (!aIsFolder && bIsFolder) return 1;
-          return a.name.localeCompare(b.name);
-        })
-        .map((child) => (
-          <TreeItem key={child.fullPath} node={child} depth={0} />
-        ))}
+      {sortChildren(tree.children, sortOrder).map((child) => (
+        <TreeItem
+          key={child.fullPath}
+          node={child}
+          depth={0}
+          sortOrder={sortOrder}
+        />
+      ))}
     </div>
   );
 }

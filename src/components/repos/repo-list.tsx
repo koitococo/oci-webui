@@ -95,7 +95,7 @@ export function RepoList() {
           {search ? "No repositories match your search." : "No repositories found."}
         </p>
       ) : viewMode === "tree" ? (
-        <RepoTree repos={filtered} />
+        <RepoTree repos={filtered} sortOrder={sortOrder} />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((name) => (
