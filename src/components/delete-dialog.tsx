@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { deleteDialogAtom } from "@/store/atoms";
 import { useDeleteManifest } from "@/hooks/use-registry";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 export function DeleteDialog() {
   const [dialog, setDialog] = useAtom(deleteDialogAtom);
   const deleteMutation = useDeleteManifest();
+  const router = useRouter();
 
   function handleClose() {
     setDialog({ open: false, repoName: "", digest: "", tag: "" });
@@ -30,6 +32,9 @@ export function DeleteDialog() {
       });
       toast.success(`Deleted ${dialog.repoName}:${dialog.tag}`);
       handleClose();
+      if (dialog.redirectTo) {
+        router.replace(dialog.redirectTo);
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to delete manifest"
