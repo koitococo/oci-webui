@@ -1,5 +1,6 @@
 import { getRegistry } from "@/lib/config";
 import { RegistryClient } from "./client";
+import type { AuthType } from "./types";
 
 export async function getAuthedClient(): Promise<{
   client: RegistryClient;
@@ -26,14 +27,28 @@ export async function getAuthedClient(): Promise<{
       : "authjs.session-token",
   });
 
-  if (!jwt?.registryCredentials) throw new Error("Unauthorized");
+  const registryName = jwt?.registryName;
+  const authType = jwt?.authType;
+  if (!registryName || !isAuthType(authType)) {
+    throw new Error("Unauthorized");
+  }
 
-  const registry = getRegistry(jwt.registryName as string | undefined);
-  const client = new RegistryClient(
-    registry,
-    jwt.registryCredentials,
-    jwt.authType ?? "bearer"
-  );
+  const credentials = jwt.registryCredentials;
+  if (authType !== "none" && !credentials) {
+    throw new Error("Unauthorized");
+  }
+
+  const registry = getRegistry(registryName);
+  const client = new RegistryClient(registry, credentials, authType);
 
   return { client, username: jwt.username as string };
+}
+
+function isAuthType(value: unknown): value is AuthType {
+  return (
+    value === "none" ||
+    value === "basic" ||
+    value === "bearer" ||
+    value === "dockerhub"
+  );
 }

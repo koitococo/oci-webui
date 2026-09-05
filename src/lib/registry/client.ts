@@ -1,42 +1,40 @@
-import { OCI_ACCEPT_HEADERS } from "@/lib/shared/constants";
-import { audit } from "@/lib/audit";
+import {
+  OCI_ACCEPT_HEADERS,
+  OCI_CONFIG_ACCEPT_HEADERS,
+} from "../shared/constants";
+import { audit } from "../audit";
+import { parseWwwAuthenticate, type AuthChallenge } from "./auth-provider";
 import type {
+  AuthType,
+  ImageConfigResponse,
+  ManifestResponse,
   OCICatalog,
+  OCIImageConfig,
   OCIManifest,
   OCIIndex,
   OCITagList,
   RegistryConfig,
 } from "./types";
 
-interface WwwAuthChallenge {
-  realm: string;
-  service?: string;
-  scope?: string;
-}
+export class RegistryRequestError extends Error {
+  readonly status: number;
 
-function parseWwwAuthenticate(header: string): WwwAuthChallenge | null {
-  const realmMatch = header.match(/realm="([^"]*)"/);
-  if (!realmMatch) return null;
-
-  const serviceMatch = header.match(/service="([^"]*)"/);
-  const scopeMatch = header.match(/scope="([^"]*)"/);
-
-  return {
-    realm: realmMatch[1],
-    service: serviceMatch?.[1],
-    scope: scopeMatch?.[1],
-  };
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "RegistryRequestError";
+    this.status = status;
+  }
 }
 
 export class RegistryClient {
-  private credentials: string; // base64(user:pass)
-  private authType: string;
+  private credentials: string | undefined;
+  private authType: AuthType;
   private tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
   constructor(
     private config: RegistryConfig,
-    credentials: string,
-    authType: string
+    credentials: string | undefined,
+    authType: AuthType
   ) {
     this.credentials = credentials;
     this.authType = authType;
@@ -46,7 +44,11 @@ export class RegistryClient {
     return `${this.config.url}/v2`;
   }
 
-  private async getBearerToken(challenge: WwwAuthChallenge): Promise<string> {
+  private async getBearerToken(challenge: AuthChallenge): Promise<string> {
+    if (!challenge.realm) {
+      throw new Error("Bearer challenge missing token realm");
+    }
+
     const cacheKey = `${challenge.realm}|${challenge.service ?? ""}|${challenge.scope ?? ""}`;
     const cached = this.tokenCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -57,22 +59,38 @@ export class RegistryClient {
     if (challenge.service) url.searchParams.set("service", challenge.service);
     if (challenge.scope) url.searchParams.set("scope", challenge.scope);
 
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: `Basic ${this.credentials}` },
-    });
-
-    if (!res.ok) {
-      throw new Error(`Bearer token fetch failed: ${res.status}`);
+    const headers = new Headers();
+    if (this.credentials) {
+      headers.set("Authorization", `Basic ${this.credentials}`);
     }
 
-    const body = await res.json();
-    const token: string = body.token ?? body.access_token;
-    if (!token) throw new Error("No token in auth response");
+    const res = await fetch(url.toString(), { headers });
 
-    const expiresIn = body.expires_in ?? 300;
+    if (!res.ok) {
+      throw new RegistryRequestError(
+        `Bearer token fetch failed: ${res.status}`,
+        res.status
+      );
+    }
+
+    const body: unknown = await res.json();
+    const bodyRecord =
+      body !== null && typeof body === "object"
+        ? (body as Record<string, unknown>)
+        : undefined;
+    const token = bodyRecord?.token ?? bodyRecord?.access_token;
+    if (typeof token !== "string" || token.length === 0) {
+      throw new Error("No token in auth response");
+    }
+
+    const expiresIn = bodyRecord?.expires_in;
+    const expiresInSeconds =
+      typeof expiresIn === "number" && Number.isFinite(expiresIn)
+        ? expiresIn
+        : 300;
     this.tokenCache.set(cacheKey, {
       token,
-      expiresAt: Date.now() + expiresIn * 1000 - 10_000, // 10s safety margin
+      expiresAt: Date.now() + expiresInSeconds * 1000 - 10_000,
     });
 
     return token;
@@ -82,34 +100,40 @@ export class RegistryClient {
     url: string,
     init: RequestInit = {}
   ): Promise<Response> {
-    // For basic auth, just send credentials directly
     if (this.authType === "basic") {
+      if (!this.credentials) {
+        throw new Error("Basic authentication requires credentials");
+      }
+
       const headers = new Headers(init.headers);
       headers.set("Authorization", `Basic ${this.credentials}`);
       return fetch(url, { ...init, headers });
     }
 
-    // For bearer auth: first try without token (or with cached token),
-    // then handle 401 by parsing WWW-Authenticate and getting a scoped token
     const headers = new Headers(init.headers);
+    headers.delete("Authorization");
+    const res = await fetch(url, { ...init, headers });
 
-    // Try the request — if we get a 401, we'll use the challenge to get a token
-    let res = await fetch(url, { ...init, headers });
-
-    if (res.status === 401) {
-      const wwwAuth = res.headers.get("www-authenticate");
-      if (wwwAuth) {
-        const challenge = parseWwwAuthenticate(wwwAuth);
-        if (challenge) {
-          const token = await this.getBearerToken(challenge);
-          const retryHeaders = new Headers(init.headers);
-          retryHeaders.set("Authorization", `Bearer ${token}`);
-          res = await fetch(url, { ...init, headers: retryHeaders });
-        }
-      }
+    if (res.status !== 401) {
+      return res;
     }
 
-    return res;
+    const wwwAuth = res.headers.get("www-authenticate");
+    if (!wwwAuth) {
+      return res;
+    }
+
+    const challenge = parseWwwAuthenticate(wwwAuth);
+    if (challenge.scheme !== "bearer" || !challenge.realm) {
+      return res;
+    }
+
+    const token = await this.getBearerToken(challenge);
+    const retryHeaders = new Headers(init.headers);
+    retryHeaders.delete("Authorization");
+    retryHeaders.set("Authorization", `Bearer ${token}`);
+
+    return fetch(url, { ...init, headers: retryHeaders });
   }
 
   async listRepositories(n?: number, last?: string): Promise<OCICatalog> {
@@ -125,7 +149,10 @@ export class RegistryClient {
         status: "failure",
         detail: `${res.status}`,
       });
-      throw new Error(`Failed to list repositories: ${res.status}`);
+      throw new RegistryRequestError(
+        `Failed to list repositories: ${res.status}`,
+        res.status
+      );
     }
 
     audit({
@@ -134,7 +161,7 @@ export class RegistryClient {
       status: "success",
     });
 
-    return res.json();
+    return (await res.json()) as OCICatalog;
   }
 
   async listTags(name: string, n?: number, last?: string): Promise<OCITagList> {
@@ -151,7 +178,10 @@ export class RegistryClient {
         status: "failure",
         detail: `${res.status}`,
       });
-      throw new Error(`Failed to list tags for ${name}: ${res.status}`);
+      throw new RegistryRequestError(
+        `Failed to list tags for ${name}: ${res.status}`,
+        res.status
+      );
     }
 
     audit({
@@ -161,13 +191,10 @@ export class RegistryClient {
       status: "success",
     });
 
-    return res.json();
+    return (await res.json()) as OCITagList;
   }
 
-  async getManifest(
-    name: string,
-    reference: string
-  ): Promise<{ manifest: OCIManifest | OCIIndex; digest: string; contentType: string }> {
+  async getManifest(name: string, reference: string): Promise<ManifestResponse> {
     const url = `${this.baseUrl}/${name}/manifests/${reference}`;
 
     const res = await this.fetchWithAuth(url, {
@@ -182,14 +209,15 @@ export class RegistryClient {
         status: "failure",
         detail: `${res.status}`,
       });
-      throw new Error(
-        `Failed to get manifest ${name}:${reference}: ${res.status}`
+      throw new RegistryRequestError(
+        `Failed to get manifest ${name}:${reference}: ${res.status}`,
+        res.status
       );
     }
 
     const digest = res.headers.get("docker-content-digest") ?? "";
     const contentType = res.headers.get("content-type") ?? "";
-    const manifest = await res.json();
+    const manifest = (await res.json()) as OCIManifest | OCIIndex;
 
     audit({
       action: "registry.manifest.get",
@@ -199,6 +227,67 @@ export class RegistryClient {
     });
 
     return { manifest, digest, contentType };
+  }
+
+  async getImageConfig(
+    name: string,
+    digest: string
+  ): Promise<ImageConfigResponse> {
+    const resource = `${name}@${digest}`;
+    const url = `${this.baseUrl}/${name}/blobs/${digest}`;
+    let res: Response;
+
+    try {
+      res = await this.fetchWithAuth(url, {
+        headers: { Accept: OCI_CONFIG_ACCEPT_HEADERS },
+      });
+    } catch (error) {
+      audit({
+        action: "registry.config.get",
+        registry: this.config.name,
+        resource,
+        status: "failure",
+        detail: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+
+    if (!res.ok) {
+      audit({
+        action: "registry.config.get",
+        registry: this.config.name,
+        resource,
+        status: "failure",
+        detail: `${res.status}`,
+      });
+      throw new RegistryRequestError(
+        `Failed to get image config ${resource}: ${res.status}`,
+        res.status
+      );
+    }
+
+    try {
+      const config = (await res.json()) as OCIImageConfig;
+      const contentType = res.headers.get("content-type") ?? "";
+
+      audit({
+        action: "registry.config.get",
+        registry: this.config.name,
+        resource,
+        status: "success",
+      });
+
+      return { config, contentType };
+    } catch (error) {
+      audit({
+        action: "registry.config.get",
+        registry: this.config.name,
+        resource,
+        status: "failure",
+        detail: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
   }
 
   async deleteManifest(name: string, digest: string): Promise<void> {
@@ -214,8 +303,9 @@ export class RegistryClient {
         status: "failure",
         detail: `${res.status}`,
       });
-      throw new Error(
-        `Failed to delete manifest ${name}@${digest}: ${res.status}`
+      throw new RegistryRequestError(
+        `Failed to delete manifest ${name}@${digest}: ${res.status}`,
+        res.status
       );
     }
 

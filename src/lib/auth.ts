@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { discoverAuthProvider } from "@/lib/registry/auth-provider";
 import { getRegistry } from "@/lib/config";
 import { audit } from "@/lib/audit";
-
+import type { AuthType } from "@/lib/registry/types";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -11,17 +11,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
         registryName: { label: "Registry", type: "text" },
+        anonymous: { label: "Anonymous", type: "text" },
       },
       async authorize(credentials) {
-        const username = credentials.username as string;
-        const password = credentials.password as string;
         const raw = credentials.registryName as string;
         const registryName = raw && raw !== "undefined" ? raw : undefined;
-
-        if (!username || !password) return null;
+        const isAnonymous = credentials.anonymous === "true";
 
         try {
           const registry = getRegistry(registryName);
+
+          if (isAnonymous) {
+            audit({
+              action: "auth.login",
+              user: "anonymous",
+              registry: registry.name,
+              status: "success",
+            });
+
+            return {
+              id: "anonymous",
+              name: "Anonymous",
+              registryName: registry.name,
+              authType: "none",
+            };
+          }
+
+          const username = credentials.username as string;
+          const password = credentials.password as string;
+          if (!username || !password) return null;
+
           const { provider } = await discoverAuthProvider(registry.url);
           // Validate credentials by attempting auth
           await provider.authenticate(username, password);
@@ -46,7 +65,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         } catch (error) {
           audit({
             action: "auth.login",
-            user: username,
+            user: isAnonymous
+              ? "anonymous"
+              : (credentials.username as string),
             status: "failure",
             detail: error instanceof Error ? error.message : "Unknown error",
           });
@@ -58,10 +79,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        token.registryName = (user as Record<string, unknown>).registryName as string;
-        token.registryCredentials = (user as Record<string, unknown>).registryCredentials as string;
-        token.authType = (user as Record<string, unknown>).authType as string;
+        const userData = user as Record<string, unknown>;
+        const authType = userData.authType as AuthType;
+
+        token.registryName = userData.registryName as string;
+        token.authType = authType;
         token.username = user.name ?? user.id;
+        token.registryCredentials =
+          authType === "none"
+            ? undefined
+            : (userData.registryCredentials as string);
       }
       return token;
     },

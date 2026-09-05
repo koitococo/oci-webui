@@ -37,18 +37,20 @@ export function LoginForm({ registries }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [selectedRegistry, setSelectedRegistry] = useState(registries[0]);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<
+    "credentials" | "anonymous" | null
+  >(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSignIn(
+    mode: "credentials" | "anonymous",
+    values: Record<string, string>
+  ) {
     setError(null);
-    setLoading(true);
+    setLoading(mode);
 
     try {
       const result = await signIn("credentials", {
-        username,
-        password,
-        registryName: selectedRegistry,
+        ...values,
         redirect: false,
       });
 
@@ -61,8 +63,24 @@ export function LoginForm({ registries }: LoginFormProps) {
     } catch {
       setError("An unexpected error occurred.");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await handleSignIn("credentials", {
+      username,
+      password,
+      registryName: selectedRegistry,
+    });
+  }
+
+  async function handleAnonymous() {
+    await handleSignIn("anonymous", {
+      registryName: selectedRegistry,
+      anonymous: "true",
+    });
   }
 
   return (
@@ -125,9 +143,24 @@ export function LoginForm({ registries }: LoginFormProps) {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
+          <div className="space-y-2">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading !== null}
+            >
+              {loading === "credentials" ? "Signing in..." : "Sign in"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={loading !== null}
+              onClick={handleAnonymous}
+            >
+              Continue anonymously
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

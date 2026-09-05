@@ -5,6 +5,7 @@ import {
   fetchCatalog,
   fetchTags,
   fetchManifest,
+  fetchImageConfig,
   deleteManifest,
 } from "@/lib/api-client";
 
@@ -28,6 +29,14 @@ export function useManifest(repoName: string, ref: string) {
     queryKey: ["manifest", repoName, ref],
     queryFn: () => fetchManifest(repoName, ref),
     enabled: !!repoName && !!ref,
+  });
+}
+
+export function useImageConfig(repoName: string, digest: string) {
+  return useQuery({
+    queryKey: ["image-config", repoName, digest],
+    queryFn: () => fetchImageConfig(repoName, digest),
+    enabled: repoName.length > 0 && digest.length > 0,
   });
 }
 

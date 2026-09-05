@@ -29,23 +29,25 @@ export function LayerTable({ layers }: { layers: OCIDescriptor[] }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead>#</TableHead>
-              <TableHead>Digest</TableHead>
+              <TableHead className="w-2/5">Digest</TableHead>
               <TableHead>Media Type</TableHead>
               <TableHead className="text-right">Size</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {layers.map((layer, i) => (
-              <TableRow key={layer.digest}>
+              <TableRow key={`${layer.digest}-${i}`}>
                 <TableCell className="text-muted-foreground">
                   {i + 1}
                 </TableCell>
-                <TableCell>
-                  <code className="text-xs">{layer.digest.slice(0, 19)}...</code>
+                <TableCell className="max-w-0 whitespace-normal">
+                  <code className="block break-all text-xs">
+                    {layer.digest}
+                  </code>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">

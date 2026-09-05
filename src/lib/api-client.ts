@@ -1,4 +1,9 @@
-import type { OCICatalog, OCITagList, OCIManifest, OCIIndex } from "./registry/types";
+import type {
+  ImageConfigResponse,
+  ManifestResponse,
+  OCICatalog,
+  OCITagList,
+} from "./registry/types";
 
 const BASE = "/api/registry";
 
@@ -33,9 +38,17 @@ export function fetchTags(
 export function fetchManifest(
   name: string,
   ref: string
-): Promise<{ manifest: OCIManifest | OCIIndex; digest: string; contentType: string }> {
+): Promise<ManifestResponse> {
   const params = new URLSearchParams({ repo: name, ref });
   return fetchApi(`${BASE}/manifests?${params}`);
+}
+
+export function fetchImageConfig(
+  name: string,
+  digest: string
+): Promise<ImageConfigResponse> {
+  const params = new URLSearchParams({ repo: name, digest });
+  return fetchApi(`${BASE}/config?${params}`);
 }
 
 export function deleteManifest(

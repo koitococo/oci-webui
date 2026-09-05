@@ -6,7 +6,8 @@ export type AuditAction =
   | "registry.catalog"
   | "registry.tags"
   | "registry.manifest.get"
-  | "registry.manifest.delete";
+  | "registry.manifest.delete"
+  | "registry.config.get";
 
 interface AuditEntry {
   action: AuditAction;

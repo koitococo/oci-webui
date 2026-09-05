@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
-import { getAuthedClient } from "@/lib/registry/server";
 import { RegistryRequestError } from "@/lib/registry/client";
+import { getAuthedClient } from "@/lib/registry/server";
 
 export async function GET(request: Request) {
   try {
-    const { client } = await getAuthedClient();
     const { searchParams } = new URL(request.url);
     const repo = searchParams.get("repo");
-    if (!repo) {
+    const digest = searchParams.get("digest");
+    if (!repo || !digest) {
       return NextResponse.json(
-        { error: "repo query parameter is required" },
+        { error: "repo and digest query parameters are required" },
         { status: 400 }
       );
     }
-    const n = searchParams.get("n")
-      ? Number(searchParams.get("n"))
-      : undefined;
-    const last = searchParams.get("last") ?? undefined;
 
-    const tags = await client.listTags(repo, n, last);
-    return NextResponse.json(tags);
+    const { client } = await getAuthedClient();
+    const config = await client.getImageConfig(repo, digest);
+    return NextResponse.json(config);
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -9,14 +9,14 @@ export interface AuthProvider {
   refreshToken?(token: AuthToken): Promise<AuthToken>;
 }
 
-interface AuthChallenge {
+export interface AuthChallenge {
   scheme: string;
   realm?: string;
   service?: string;
   scope?: string;
 }
 
-function parseWwwAuthenticate(header: string): AuthChallenge {
+export function parseWwwAuthenticate(header: string): AuthChallenge {
   const schemeMatch = header.match(/^(\w+)\s/);
   const scheme = schemeMatch?.[1]?.toLowerCase() ?? "basic";
 

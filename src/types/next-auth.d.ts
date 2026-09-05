@@ -1,6 +1,6 @@
 import "next-auth";
 import "next-auth/jwt";
-
+import type { AuthType } from "@/lib/registry/types";
 declare module "next-auth" {
   interface Session {
     registryName: string;
@@ -15,6 +15,6 @@ declare module "next-auth/jwt" {
     username?: string;
     registryName?: string;
     registryCredentials?: string;
-    authType?: string;
+    authType?: AuthType;
   }
 }

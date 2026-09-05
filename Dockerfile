@@ -1,7 +1,7 @@
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
+RUN npm install --global corepack@0.36.0 && corepack enable && corepack prepare pnpm@10.28.2 --activate
 
 # --- Dependencies stage ---
 FROM base AS deps
@@ -21,7 +21,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
 # --- Runner stage ---
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
