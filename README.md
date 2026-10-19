@@ -6,9 +6,14 @@ A web-based UI for browsing and managing OCI (Docker) container registries.
 
 - Browse repositories with grid or tree view (grouped by namespace)
 - Inspect tags, manifests, layers, and multi-platform images
+- View repository tags in a single-column table with wrapping names, digest previews, and inspect/delete actions
 - Delete manifests directly from the UI
 - Supports any OCI-compliant registry (Docker Registry v2, Harbor, GHCR, etc.)
 - Single or multi-registry mode
+
+Image details wrap long tags, digests, and JSON values on narrow screens. Image
+config and raw manifest/index JSON use 24rem-tall shadcn/ui scroll areas;
+scroll inside each panel to read the full document without covering other cards.
 
 ## Quick Start
 

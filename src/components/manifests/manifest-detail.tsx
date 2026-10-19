@@ -141,10 +141,12 @@ export function ManifestDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Badge variant="outline">{contentType}</Badge>
-        <code className="text-xs text-muted-foreground">{digest}</code>
-        <div className="ml-auto">
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge variant="outline" className="max-w-full whitespace-normal break-all">
+          {contentType}
+        </Badge>
+        <code className="break-all text-xs text-muted-foreground">{digest}</code>
+        <div className="ml-auto shrink-0">
           <Button
             variant="destructive"
             size="sm"
@@ -352,7 +354,7 @@ function ImageManifestDetails({
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="max-w-full whitespace-normal break-all">
               {typeof manifest.config.mediaType === "string"
                 ? manifest.config.mediaType
                 : "unknown"}
@@ -406,8 +408,8 @@ function ImageConfigCard({
             </AlertDescription>
           </Alert>
         ) : data ? (
-          <ScrollArea className="max-h-96">
-            <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded bg-muted p-4 text-xs">
+          <ScrollArea className="h-96 w-full min-w-0 max-w-full">
+            <pre className="max-w-full whitespace-pre-wrap break-all rounded bg-muted p-4 text-xs">
               {JSON.stringify(data.config, null, 2)}
             </pre>
           </ScrollArea>
@@ -430,8 +432,8 @@ function RawJsonCard({ title, value }: { title: string; value: unknown }) {
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="max-h-96">
-          <pre className="overflow-x-auto rounded bg-muted p-4 text-xs">
+        <ScrollArea className="h-96 w-full min-w-0 max-w-full">
+          <pre className="max-w-full whitespace-pre-wrap break-all rounded bg-muted p-4 text-xs">
             {json ?? "Unable to serialize manifest."}
           </pre>
         </ScrollArea>

@@ -34,7 +34,7 @@ export default async function RepoPage({
             { label: tag },
           ]}
         />
-        <h1 className="mb-6 text-2xl font-bold">
+        <h1 className="mb-6 text-2xl font-bold [overflow-wrap:anywhere]">
           {repoName}
           <span className="text-muted-foreground">:{tag}</span>
         </h1>
@@ -51,7 +51,9 @@ export default async function RepoPage({
           { label: repoName },
         ]}
       />
-      <h1 className="mb-6 text-2xl font-bold">{repoName}</h1>
+      <h1 className="mb-6 text-2xl font-bold [overflow-wrap:anywhere]">
+        {repoName}
+      </h1>
       <TagList repoName={repoName} />
     </div>
   );

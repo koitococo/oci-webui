@@ -3,8 +3,15 @@
 import { useTags } from "@/hooks/use-registry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TagCard } from "./tag-card";
+import { TagRow } from "./tag-row";
 import { DeleteDialog } from "@/components/delete-dialog";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export function TagList({ repoName }: { repoName: string }) {
   const { data, isLoading, error } = useTags(repoName);
@@ -21,7 +28,7 @@ export function TagList({ repoName }: { repoName: string }) {
 
   if (isLoading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-20 rounded-lg" />
         ))}
@@ -39,10 +46,20 @@ export function TagList({ repoName }: { repoName: string }) {
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {data.tags.map((tag) => (
-          <TagCard key={tag} repoName={repoName} tag={tag} />
-        ))}
+      <div className="min-w-0 rounded-lg border">
+        <Table className="w-full table-fixed">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tag</TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.tags.map((tag) => (
+              <TagRow key={tag} repoName={repoName} tag={tag} />
+            ))}
+          </TableBody>
+        </Table>
       </div>
       <DeleteDialog />
     </>

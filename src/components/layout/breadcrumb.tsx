@@ -11,16 +11,21 @@ interface BreadcrumbItem {
 
 export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
   return (
-    <nav className="mb-4 flex items-center gap-1 text-sm text-muted-foreground">
+    <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
       {items.map((item, i) => (
         <Fragment key={i}>
-          {i > 0 && <ChevronRight className="h-3 w-3" />}
+          {i > 0 && <ChevronRight className="h-3 w-3 shrink-0" />}
           {item.href ? (
-            <Link href={item.href} className="hover:text-foreground">
+            <Link
+              href={item.href}
+              className="min-w-0 max-w-full [overflow-wrap:anywhere] hover:text-foreground"
+            >
               {item.label}
             </Link>
           ) : (
-            <span className="text-foreground">{item.label}</span>
+            <span className="min-w-0 max-w-full text-foreground [overflow-wrap:anywhere]">
+              {item.label}
+            </span>
           )}
         </Fragment>
       ))}
