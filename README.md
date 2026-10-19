@@ -52,7 +52,9 @@ All configuration is done via environment variables.
 | Variable | Default | Description |
 |---|---|---|
 | `REGISTRY_NAME` | hostname from URL | Display name for the registry |
-| `NEXTAUTH_URL` | `http://localhost:3000` | Public URL of this app (set when behind a reverse proxy) |
+| `AUTH_URL` | `http://localhost:3000` | Public URL of this app |
+
+For production self-hosting, explicitly set `AUTH_URL` to the app's public URL (for example, `https://registry-ui.example.com`). Behind a reverse proxy, use `AUTH_TRUST_HOST=true` only when the trusted proxy correctly overwrites forwarded headers.
 
 ### Multi-Registry Mode
 
@@ -85,6 +87,10 @@ services:
 When `REGISTRIES_CONFIG_PATH` is set, `REGISTRY_URL` and `REGISTRY_NAME` are ignored. A registry selector will appear on the login page.
 
 ## Build from Source
+
+Use Node.js 26 and pnpm 10.28.2.
+
+The latest TypeScript 7 and typescript-eslint 8.71.2 are still incompatible; `pnpm lint` refuses to run with this combination and has not passed.
 
 ```bash
 pnpm install

@@ -8,7 +8,7 @@ services:
       - AUTH_TRUST_HOST=true
       - REGISTRY_URL=http://registry:5000
       - REGISTRY_NAME=local
-      - NEXTAUTH_URL=http://localhost:3000
+      - AUTH_URL=http://localhost:3000
     depends_on:
       - registry
 
