@@ -1,4 +1,3 @@
-import { RegistryRequestError } from "./client";
 import type { OCITagList } from "@/lib/registry/types";
 
 type ListTags = (name: string) => Promise<OCITagList>;
@@ -9,7 +8,8 @@ function hasValidTags(tags: string[] | undefined): boolean {
 
 export async function filterRepositoriesWithTags(
   repositories: string[],
-  listTags: ListTags
+  listTags: ListTags,
+  shouldPropagateError: (error: unknown) => boolean = () => false
 ): Promise<string[]> {
   const checks = repositories.map(async (repository) => {
     try {
@@ -17,7 +17,7 @@ export async function filterRepositoriesWithTags(
 
       return hasValidTags(tagList.tags) ? repository : null;
     } catch (error) {
-      if (error instanceof RegistryRequestError) {
+      if (shouldPropagateError(error)) {
         throw error;
       }
 

@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { filterRepositoriesWithTags } from "./catalog-filter";
-import { RegistryRequestError } from "./client";
 
 test("filterRepositoriesWithTags keeps repositories with at least one valid tag", async () => {
   const repositories = ["repo-a", "repo-b", "repo-c"];
@@ -42,13 +41,18 @@ test("filterRepositoriesWithTags filters repositories when tag lookup fails", as
   assert.deepEqual(result, ["repo-a"]);
 });
 
-test("filterRepositoriesWithTags propagates registry request errors", async () => {
+test("filterRepositoriesWithTags propagates errors selected by the caller", async () => {
+  const requestError = new Error("forbidden");
+
   await assert.rejects(
     () =>
-      filterRepositoriesWithTags(["repo-a"], async () => {
-        throw new RegistryRequestError("forbidden", 403);
-      }),
-    (error: unknown) =>
-      error instanceof RegistryRequestError && error.status === 403
+      filterRepositoriesWithTags(
+        ["repo-a"],
+        async () => {
+          throw requestError;
+        },
+        (error) => error === requestError
+      ),
+    (error: unknown) => error === requestError
   );
 });

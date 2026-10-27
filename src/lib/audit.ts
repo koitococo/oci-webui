@@ -1,13 +1,6 @@
 import { log } from "./logger";
 
-export type AuditAction =
-  | "auth.login"
-  | "auth.logout"
-  | "registry.catalog"
-  | "registry.tags"
-  | "registry.manifest.get"
-  | "registry.manifest.delete"
-  | "registry.config.get";
+export type AuditAction = "auth.login" | "auth.logout";
 
 interface AuditEntry {
   action: AuditAction;

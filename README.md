@@ -86,6 +86,28 @@ services:
 
 When `REGISTRIES_CONFIG_PATH` is set, `REGISTRY_URL` and `REGISTRY_NAME` are ignored. A registry selector will appear on the login page.
 
+## Registry API
+
+`/api/v2/[...path]` proxies `GET`, `HEAD`, and `DELETE` requests to
+`<selected-registry-url>/v2/[...path]`, preserving query parameters, upstream
+status codes, response bodies, and end-to-end response headers. The selected
+registry and credentials come from the application session. The server handles
+Basic authentication and Bearer challenge/token exchange; browser cookies and
+Authorization headers are not forwarded upstream.
+
+The browser uses OCI paths such as `/_catalog`, `/<repository>/tags/list`,
+`/<repository>/manifests/<reference>`, and `/<repository>/blobs/<digest>` under
+`/api/v2`. Repository/tag aggregation, empty-repository filtering, and
+manifest/config response adaptation run in the browser. The former
+`/api/registry/*` endpoints have been removed.
+Digest paths retain the literal algorithm separator (`sha256:…`); some registries
+interpret `%3A` literally and reject the resulting digest.
+
+Upstream errors retain their original status and body; the browser displays OCI
+error messages or non-JSON error text. Missing application sessions return JSON
+with status `401`. Proxy failures return JSON with status `502` and are logged
+server-side with the request method, pathname, and exception.
+
 ## Build from Source
 
 Use Node.js 26 and pnpm 10.28.2.

@@ -25,7 +25,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Allow public paths without auth
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) || pathname === "/api/v2" || pathname.startsWith("/api/v2/")) {
     return NextResponse.next();
   }
 
