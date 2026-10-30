@@ -156,6 +156,7 @@ export function ManifestDetail({
                 repoName,
                 digest,
                 tag,
+                redirectTo: `/repos/${repoName}`,
               })
             }
           >
