@@ -36,6 +36,10 @@ docker compose up -d
 
 Then open http://localhost:3000 and sign in with your registry credentials.
 
+The container runs on Debian 13-based Node.js 26 Distroless (glibc), as UID/GID
+`65532:65532`. It has no shell; mounted registry configuration files must be
+readable by that user.
+
 ## Configuration
 
 All configuration is done via environment variables.
